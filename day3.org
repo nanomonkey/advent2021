@@ -90,38 +90,66 @@ Finally, to find the life support rating, multiply the oxygen generator rating (
 
 Use the binary numbers in your diagnostic report to calculate the oxygen generator rating and CO2 scrubber rating, then multiply them together. What is the life support rating of the submarine? (Be sure to represent your answer in decimal, not binary.)
 
-#+BEGIN_SRC babashka
+#+BEGIN_SRC babashka :results raw
   (def file (slurp "day3.txt"))
+
+  (def example "00100
+  11110
+  10110
+  10111
+  10101
+  01111
+  00111
+  11100
+  10000
+  11001
+  00010
+  01010")
 
   (defn seperate [input] (mapv #(str/split % #"") (str/split-lines input)))
 
-  (defn most-common-bit [input n] 
-    (let [freq (frequencies (str/join "" (for [line (seperate input)]
-                                               (nth line n))))]
-          (if (>= (freq \1) (freq \0)) \1 \0)))
+  (defn most-common-bit [diagnostic n] 
+    (let [freq (frequencies (str/join "" (for [line diagnostic]
+                                           (nth line n))))]
+      (if (>= (get freq \1 0) (get freq \0 0)) \1 \0)))
 
-  (defn oxygen-rating [input]
+  (defn least-common-bit [diagnostic n]
+    (let [freq (frequencies (str/join "" (for [line diagnostic]
+                                           (nth line n))))]
+      (if (< (get freq \1 0) (get freq \0 0)) \1 \0)))
 
-  )
+  (defn has-bit? [line bit n] (= (str bit) (nth line n)))
 
-  (defn co2-rating [input]
-  )
+  (defn filter-lines [diagnostic bit-fn] 
+    (loop [n 0
+           filtered (filter #(has-bit? %  (bit-fn diagnostic n) n) diagnostic)]
+      (if (= 1 (count filtered))
+        (apply #(str/join "" %) filtered)
+        (recur (inc n) 
+               (filter #(has-bit? % (bit-fn filtered (inc n)) (inc n)) filtered)))))
+
+  (defn oxygen-rating [diagnostic]
+   (Integer/parseInt (filter-lines diagnostic most-common-bit) 2))
+
+  (defn co2-rating [diagnostic] 
+   (Integer/parseInt (filter-lines diagnostic least-common-bit) 2))
 
   (defn part-2 [input]
-    (let [width (count (first(seperate input)))
-          gamma (atom 2r00000)]
-      (doseq [n (range width)]
-        (let [freq (frequencies (str/join "" (for [line (seperate input)]
-                                               (nth line n))))]
-          (if (>= (freq \1) (freq \0))
-            (swap! gamma #(bit-set % (- width n 1))))))
-      (* @gamma (bit-xor @gamma 2r111111111111))))
+    (let [diagnostic (seperate input)]
+      (* (oxygen-rating diagnostic)
+         (co2-rating diagnostic))))
 
   (part-2 file)
-
-
+  ;(part-2 example)
 #+END_SRC
+
+#+RESULTS:
+5941884
 
 #+BEGIN_SRC babashka
-(Integer/toBinaryString 44)
+(Integer/toBinaryString 22)
+
 #+END_SRC
+
+#+RESULTS:
+: 10110

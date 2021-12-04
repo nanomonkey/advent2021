@@ -1,0 +1,9 @@
+
+#+BEGIN_SRC babashka
+
+#+END_SRC
+
+(def file (slurp "day2.txt"))
+(defn get-instructions [input] (for [line (str/split-lines input) 
+                                       :let [[operation arg] (str/split line #" ")]]
+                                   [operation (read-string arg)]))
