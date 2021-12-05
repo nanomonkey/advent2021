@@ -111,6 +111,7 @@ Consider all of the lines. At how many points do at least two lines overlap?
 
 #+BEGIN_SRC babashka :results raw
   (def file (slurp "day5.txt"))
+  (defn seperate [input] (str/split-lines input))
   (def example "0,9 -> 5,9
     8,0 -> 0,8
     9,4 -> 3,4
@@ -124,38 +125,33 @@ Consider all of the lines. At how many points do at least two lines overlap?
 
   (def pattern #"(\d+),(\d+) -> (\d+),(\d+)")
 
-  (defn seperate [input] (str/split-lines input))
+  (defn diag [x1 y1 x2 y2] 
+    (map (fn [[x y]] (str x "," y))
+         (partition 2 (interleave (range x1 (if (< x2 x1) (dec x2) (inc x2)) 
+                                         (if (< x2 x1) -1 1))
+                                  (range y1 (if (< y2 y1) (dec y2) (inc y2)) 
+                                         (if (< y2 y1) -1 1))))))
 
   (defn expand-points [x1 y1 x2 y2]
-    (for [x (range (min x1 x2) (inc (max x1 x2)))
-          y (range (min y1 y2) (inc (max y1 y2)))]
-      (str x "," y)))
-
-  (defn expand-diag [x1 y1 x2 y2]
-  
-  )
+    (if (or (= x1 x2) (= y1 y2)) 
+      (for [x (range (min x1 x2) (inc (max x1 x2)))
+            y (range (min y1 y2) (inc (max y1 y2)))]
+        (str x "," y))
+      (diag x1 y1 x2 y2)))
 
   (defn vents [input]
     (apply concat
            (for [item (seperate input)
-                 :let [[_ x1 y1 x2 y2] (re-find pattern item)]
-                 :when (or (= x1 x2) (= y1 y2))] 
+                 :let [[_ x1 y1 x2 y2] (re-find pattern item)]] 
              (apply expand-points (mapv #(Integer/parseInt %) [x1 y1 x2 y2])))))
 
   (defn part-2 [input] 
     (count (filter #(> % 1) (vals (frequencies (vents input))))))
 
-
-    ;(part-1 example)
-  (part-1 file)
-
-#+END_SRC
-
-#+BEGIN_SRC babashka :results raw
-
-(apply + (mapv #(Integer/parseInt %) ["1" "2" "3"]))
+  ;(filter #(> % 1) (vals (frequencies (vents file))))
+  ;(part-2 example)
+  (part-2 file)
 #+END_SRC
 
 #+RESULTS:
-6
-[1 2 3]
+17717
