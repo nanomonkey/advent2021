@@ -97,7 +97,7 @@ How many lanternfish would there be after 256 days?
   (defn lantern-buckets [input] 
     (let [bucket (atom [0 0 0 0 0 0 0 0 0])]
       (doseq [x (seperate input)]
-        (swap! bucket assoc x inc))
+        (swap! bucket update x inc))
       @bucket))
 
   (defn part-2 [input]
@@ -105,17 +105,20 @@ How many lanternfish would there be after 256 days?
           lantern-counter (atom (lantern-buckets input))]
       (while (not= @days 0)
         ;(println @lantern-counter)
-        (doseq [x (range 9)])
-        (swap! lantern-counter #(mapv dec %))
-        (doseq [n (range (count @lantern-counter))]
-          (if (= -1 (nth @lantern-counter n)) (do (swap! lantern-counter assoc n 6) 
-                                                 (swap! lantern-counter conj 8))))
+        (let [old @lantern-counter]
+          (doseq [bin (range 8)] ;; bin 0 is equivalent to day -1 in old model
+            (if (= 0 bin)
+              (do
+                (swap! lantern-counter assoc 8 (nth old 0))
+                (swap! lantern-counter assoc 6 (+ (nth old 0) (nth old 7)))))
+            (if (not= bin 6)
+              (swap! lantern-counter assoc bin (nth old (inc bin))))))
         (swap! days dec))
-      (count @lantern-counter)))
+      (reduce +  @lantern-counter)))
 
-  ;(part-1 example)
-  ;(part-2 file)
-
-  (lantern-buckets example)
-
+  ;(part-2 example)
+  (part-2 file)
 #+END_SRC
+
+#+RESULTS:
+1631629590423
