@@ -87,10 +87,7 @@ In the output values, how many times do digits 1, 4, 7, or 8 appear?
                         (re-find pattern item)]] 
               (count (filter #{2 4 3 7} (mapv count [o1 o2 o3 o4]))))))
 
-  ;(first (seperate file))
-  ;(part-1 example)
   (part-1 file)
-
 #+END_SRC
 
 #+RESULTS:
@@ -148,12 +145,23 @@ Following this same process for each entry in the second, larger example above, 
     gbdfcae bgc cg cgb: 8717
     fgae cfgab fg bagce: 4315
 
+(8394 9781 1197 9361 4873 8418 4548 1655 8717 4315)
 Adding all of the output values in this larger example produces 61229.
 
 For each entry, determine all of the wire/segment connections and decode the four-digit output values. What do you get if you add up all of the output values?
 
-#+BEGIN_SRC babashka :output raw
+#+BEGIN_SRC babashka :results raw
   (def file (slurp "day8.txt"))
+  (def example "be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb | fdgacbe cefdb cefbgd gcbe
+  edbfga begcd cbg gc gcadebf fbgde acbgfd abcde gfcbed gfec | fcgedb cgb dgebacf gc
+  fgaebd cg bdaec gdafb agbcfd gdcbef bgcad gfac gcb cdgabef | cg cg fdcagb cbg
+  fbegcd cbd adcefb dageb afcb bc aefdc ecdab fgdeca fcdbega | efabcd cedba gadfec cb
+  aecbfdg fbg gf bafeg dbefa fcge gcbea fcaegb dgceab fcbdga | gecf egdcabf bgf bfgea
+  fgeab ca afcebg bdacfeg cfaedg gcfdb baec bfadeg bafgc acf | gebdcfa ecba ca fadegcb
+  dbcfg fgd bdegcaf fgec aegbdf ecdfab fbedc dacgb gdcebf gf | cefg dcbef fcge gbcadfe
+  bdfegc cbegaf gecbf dfcage bdacg ed bedf ced adcbefg gebcd | ed bcgafe cdgba cbgef
+  egadfb cdbfeg cegd fecab cgb gbdefca cg fgcdab egfdb bfceg | gbdfcae bgc cg cgb
+  gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce")
 
   (def pattern 
     #"([a-h]+) ([a-h]+) ([a-h]+) ([a-h]+) ([a-h]+) ([a-h]+) ([a-h]+) ([a-h]+) ([a-h]+) ([a-h]+) \| ([a-h]+) ([a-h]+) ([a-h]+) ([a-h]+)")
@@ -161,65 +169,47 @@ For each entry, determine all of the wire/segment connections and decode the fou
   (defn seperate [input] (str/split-lines input))
 
   (defn get-digits [inputs]
-  (let [cypher (atom {})]
-        (doseq [i inputs]
-          (cond
-            (= 2 (count i)) (swap! cypher assoc i 7)))))
+    (let [cypher (atom {})]
+      (doseq [i inputs]
+        (cond 
+          (= 2 (count i)) (swap! cypher assoc (set i) 1)
+          (= 4 (count i)) (do (swap! cypher assoc (set i) 4)
+                              (swap! cypher assoc "four" (set i)))
+          (= 3 (count i)) (do (swap! cypher assoc (set i) 7)
+                              (swap! cypher assoc "seven" (set i)))
+          (= 7 (count i)) (swap! cypher assoc (set i) 8)
+          (= 6 (count i)) (swap! cypher assoc (set i) "069")
+          (= 5 (count i)) (swap! cypher assoc (set i) "235")
+          :else (println "unexpected: " i)))
+      (doseq [[k v] @cypher]
+          (case v
+            "069" (if (every? k (get @cypher "seven"))
+                    (if (every? k (get @cypher "four"))
+                      (swap! cypher assoc (set k) 9) ; segments in 7 and 4
+                      (swap! cypher assoc (set k) 0)) ; segments in 7 but not 4
+                    (swap! cypher assoc (set k) 6)) ; don't contain segments of 7
+            "235" (if (every? k (get @cypher "seven"))
+                    (swap! cypher assoc (set k) 3)  ; contains all the segments of 7
+                    (if (= 2 (count (set/difference (get @cypher "four") k)))
+                      (swap! cypher assoc (set k) 2) 
+                      (swap! cypher assoc (set k) 5))) 
+            "default"))
+      @cypher))
 
+  (defn digits [w x y z] (+ z (* 10 y) (* 100 x) (* 1000 w)))
 
   (defn part-2 [input]
-    (for [item (seperate input)
-          :let [[_ i1 i2 i3 i4 i5 i6 i7 i8 i9 i10 o1 o2 o3 o4] 
-                (re-find pattern item)]] 
-      [i1 i2 i3 i4 i5 i6 i7 i8 i9 i10]))
-
-
+    (reduce +
+            (for [item (seperate input)
+                  :let [[_ i1 i2 i3 i4 i5 i6 i7 i8 i9 i10 o1 o2 o3 o4] (re-find pattern item)
+                        cypher (get-digits [i1 i2 i3 i4 i5 i6 i7 i8 i9 i10])]] 
+              (apply digits (mapv cypher [(set o1) (set o2) (set o3) (set o4)])))))
 
   ;(part-2 example)
-  (first (part-2 file))
-
+  (part-2 file)
 
 
 #+END_SRC
 
 #+RESULTS:
-: #{"dfb" "degfca" "dbeaf" "bd" "edcfgab" "cfdbge" "badc" "cfbdea" "efbag" "dcafe"}
-
-
-
-  0:      1:      2:      3:      4:
- aaaa    ....    aaaa    aaaa    ....
-b    c  .    c  .    c  .    c  b    c
-b    c  .    c  .    c  .    c  b    c
- ....    ....    dddd    dddd    dddd
-e    f  .    f  e    .  .    f  .    f
-e    f  .    f  e    .  .    f  .    f
- gggg    ....    gggg    gggg    ....
-
-  5:      6:      7:      8:      9:
- aaaa    aaaa    aaaa    aaaa    aaaa
-b    .  b    .  .    c  b    c  b    c
-b    .  b    .  .    c  b    c  b    c
- dddd    dddd    ....    dddd    dddd
-.    f  e    f  .    f  e    f  .    f
-.    f  e    f  .    f  e    f  .    f
- gggg    gggg    ....    gggg    gggg
-
-(case 
-  (= 2 (count i)) 1
-  (= 4 (count i)) 4
-  (= 3 (count i)) 7
-  (= 7 (count i)) 8
-  (= 6 (count i) 0 6 9
-     (if segments in 4 and 7 in, then 9
-     (if segments in 7 not in then 6
-      if segments in 7 only then 0
-  (= 5 (count i) 2 3 5
-      (if segments in 7 then 3
-       else if two segments in common with 4 then 2 else 5
-
-(count {:0 4 :1 2 :2 5 :3 5 :4 4 :5 5 :6 6 :7 3 :8 7 :9 6})
-(missing-center :0 :1 :7)
-(missing top :1 :4)
-(missing bottom :1 :4 :7)
-(missing-bottom-left :1 :3 :4 :5 :7 :9)
+986034
